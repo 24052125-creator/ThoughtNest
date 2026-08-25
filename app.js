@@ -1,16 +1,16 @@
-const doc = document
+const d = document
 
-const title = doc.getElementById("title")
-const date = doc.getElementById("date")
-const mood = doc.getElementById("mood")
-const content = doc.getElementById("content")
-const tags = doc.getElementById("tags")
+const title = d.getElementById("title")
+const date = d.getElementById("date")
+const mood = d.getElementById("mood")
+const content = d.getElementById("content")
+const tags = d.getElementById("tags")
 
 date.value = new Date().toISOString().split('T')[0]
 
-console.log(new Date().toDateString())
 
-// journal colors
+
+// journal colors json
 const colors = {
     "happy": { "bg": "#FFB30022", "text": "#FFD54F", "border": "#FFB30055" },
     "sad": { "bg": "#0091EA22", "text": "#40C4FF", "border": "#0091EA55" },
@@ -28,31 +28,20 @@ const colors = {
 }
 
 
+
+
 // this function will return the color for the journals in the left side based on the mood of the journal, if the mood is not found in the colors object, it will return the default color (white background, black text and gray border)
 const colorForJournal = (mood = "other") => {
     return colors[mood.toLowerCase()]
 }
 
 
-// emojis for moods
-const moodEmojis = {
-    happy: '😁',
-    sad: '😢',
-    angry: '😡',
-    calm: '😌',
-    anxious: '😰',
-    excited: '🤩',
-    motivated: '💪',
-    tired: '😴',
-    focused: '🎯',
-    lonely: '😔',
-    grateful: '🙏',
-    confused: '🤔',
-    other: '📝'
-}
+
 
 
 // delete journal by id
+// fetching all the journals
+// then filtering all the journals whose id is not equal to the id passed in argument and then saving the resulting array
 const deleteJournalById = (id) => {
     const journals = JSON.parse(localStorage.getItem("journals")) || []
     const filtered = journals.filter(entry => entry.id !== id)
@@ -60,10 +49,15 @@ const deleteJournalById = (id) => {
 }
 
 
+
+
 // Saving the journal in local storage
 const saveJournal = () => {
 
-    if (!title.value || !mood.value || !content.value) return;
+    if (!title.value || !mood.value || !content.value) {
+        alert("All fields are required")
+        return
+    }
 
     const journals = JSON.parse(localStorage.getItem("journals")) || []
 
@@ -80,32 +74,29 @@ const saveJournal = () => {
     })
 
     localStorage.setItem("journals", JSON.stringify(journals))
-    
+    clearForm();
+
 }
 
-const save = doc.getElementById("save")
-console.log(save)
-
-if (save) {
-    save.addEventListener("click", (e) => {
-        e.preventDefault()
-        saveJournal();
-        clearForm();
-        renderJournals();
-    })
-} else {
-    console.warn('Save button not found')
-}
+const form = d.querySelector("form")
 
 
+form.addEventListener("submit", (e) => {
+    e.preventDefault()
+    saveJournal();
+    renderJournals();
+})
+
+
+
+
+// render function for rendering the journals in the left space
 const renderJournals = () => {
     const journals = JSON.parse(localStorage.getItem("journals")) || [];
-    const journalList = doc.querySelector(".entries-list")
+    const journalList = d.querySelector(".entries-list ul")
+    console.log(journalList)
 
-    if (!journalList) {
-        return
-    }
-
+    // if there are no thoughts/journals present in our localStrorage then the below message will be shown on the screen
     if (journals.length === 0) {
         journalList.innerHTML = `
             <div class="empty-state">
@@ -117,9 +108,9 @@ const renderJournals = () => {
         return
     }
 
+    // if thoughts are present in the storage then we are rendering as an li tag each with specialized colors based on mood
     journalList.innerHTML = journals.map(journal => {
-        const color = colorForJournal(journal.mood) || colors["other"]
-        const tags = Array.isArray(journal.tags) ? journal.tags : []
+        const color = colorForJournal(journal.mood.split(" ")[1]) || colors["other"]  // getting the colors for the thought from the color schema created at the beginning
 
         return `
 <li class="journal-entry" style="background-color: ${color.bg}; color: ${color.text}; border: 2px solid ${color.border};">
@@ -133,7 +124,7 @@ const renderJournals = () => {
     <div class="journal-meta">
         <span class="journal-date">📅 ${journal.date}</span>
         <span class="journal-mood" style="background-color: ${color.bg}; color: ${color.text}; border-color: ${color.border};">
-            ${moodEmojis[journal.mood] || moodEmojis.other} ${journal.mood}
+            ${journal.mood}
         </span>
     </div>
 
@@ -141,18 +132,22 @@ const renderJournals = () => {
         ${journal.content}
     </div>
 
-    ${tags.length > 0 ? `
     <div class="journal-tags">
-        ${tags.map((tag) => `<span class="tag" style="background-color: ${color.border}; color: ${color.text};">#${tag}</span>`).join("")}
+        ${journal.tags.map((tag) => `<span class="tag" style="background-color: ${color.border}; color: ${color.text};">#${tag}</span>`).join("")}
     </div>
-    ` : ''}
+
 </li>
 `;
     }).join("")
 
+    // what we have done is converted all the array values into an array of li tags and ran a .join() function on the resulting array which will 
+    // convert the array like a large string and then we are assigning it to innerHTML of ul (that we have left empty in the html file)
+
+
+    // adding the delete functionality to every delete button
     journalList.querySelectorAll('.btn-delete').forEach(btn => {
         btn.addEventListener('click', (e) => {
-            const id = btn.dataset.id
+            const id = btn.dataset.id // you can see in line no 117, we have added data-id, we are using that one here, this is how we access
             if (!id) return
             deleteJournalById(id)
             renderJournals()
@@ -162,22 +157,12 @@ const renderJournals = () => {
 
 // clear the form
 const clearForm = () => {
-    if (title) title.value = ""
-    if (date) date.value = new Date().toISOString().split('T')[0]
-    if (mood) mood.value = ""
-    if (tags) tags.value = ""
-    if (content) content.value = ""
-    if (title) title.focus()
-}
-
-const cancel = doc.getElementById("cancel")
-console.log(cancel)
-if (cancel) {
-    cancel.addEventListener("click", (e) => {
-        clearForm();
-    })
-} else {
-    console.warn('Cancel button not found')
+    title.value = ""
+    date.value = new Date().toISOString().split('T')[0]
+    mood.value = ""
+    tags.value = ""
+    content.value = ""
+    title.focus() // this will focus our cursor to the title input after the form is cleared
 }
 
 
